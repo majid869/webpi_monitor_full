@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مدیریت کاربران</title>
+<style>
+* { box-sizing: border-box; font-family: "B Nazanin", "B Traffic", Tahoma, "Times New Roman", sans-serif; }
+body {background:#0f1724;color:#e6eef8;font-family:'Vazirmatn',Tahoma,Arial;margin:0;padding:0}
+.header {display:flex;align-items:center;padding:16px 24px;background:#0b1220}
+.brand {font-weight:700;font-size:1.2rem}
+.controls {margin-left:auto;display:flex;gap:8px}
+.btn {background:rgba(255,255,255,0.05);padding:8px 12px;border-radius:8px;border:none;color:#e6eef8;cursor:pointer}
+.container {max-width:800px;margin:24px auto;padding:0 16px}
+.card {background:#0b1220;padding:16px;border-radius:10px;margin-bottom:12px}
+table {width:100%;border-collapse:collapse}
+th,td {padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08)}
+input,select {background:#1e293b;color:#e6eef8;border:none;padding:6px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="brand">مدیریت کاربران</div>
+  <div class="controls">
+    <button class="btn" onclick="location.href='/manage'">مدیریت اهداف</button>
+    <a class="btn" href="/logout">خروج</a>
+  </div>
+</div>
+<div class="container">
+  <div class="card">
+    <h3>افزودن کاربر جدید</h3>
+    <div>
+      <input id="username" placeholder="نام کاربری">
+      <input id="password" type="password" placeholder="رمز عبور">
+      <select id="role">
+        <option value="user">کاربر معمولی</option>
+        <option value="admin">مدیر</option>
+      </select>
+      <button class="btn" onclick="addUser()">افزودن</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>لیست کاربران</h3>
+    <table id="tbl">
+      <thead>
+        <tr><th>نام کاربری</th><th>نقش</th><th>عملیات</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+async function loadUsers(){
+  const r = await fetch('/api/users');
+  const data = await r.json();
+  const tbody = document.querySelector('#tbl tbody');
+  tbody.innerHTML='';
+  for(const u of data){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${u.username}</td><td>${u.role}</td>
+    <td>
+      <button class='btn' onclick='delUser("${u.username}")'>حذف</button>
+      <button class='btn' onclick='promptChangePassword("${u.username}")'>تغییر رمز</button>
+    </td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+async function addUser(){
+  const username=document.getElementById('username').value;
+  const password=document.getElementById('password').value;
+  const role=document.getElementById('role').value;
+  if(!username || !password){ alert('نام کاربری و رمز لازم است'); return; }
+  const r = await fetch('/api/users/add',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username,password,role})
+  });
+  if(r.ok){ alert('کاربر افزوده شد'); loadUsers(); }
+  else { 
+    const err = await r.json().catch(()=>({error:'خطا'}));
+    alert('خطا: '+(err.error||'نامشخص'));
+  }
+}
+
+async function delUser(u){
+  if(!confirm('حذف '+u+'?')) return;
+  const r = await fetch('/api/users/delete',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u})
+  });
+  if(r.ok){ loadUsers(); }
+}
+
+async function promptChangePassword(username){
+  const newPass = prompt("رمز جدید برای کاربر " + username + " را وارد کنید:");
+  if(!newPass) return;
+  const r = await fetch('/api/users/change_password',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username, new_password: newPass})
+  });
+  if(r.ok) alert("رمز با موفقیت تغییر یافت");
+  else {
+    const err = await r.json().catch(()=>({error:'خطا'}));
+    alert("خطا: " + (err.error || "نامشخص"));
+  }
+}
+
+loadUsers();
+</script>
+</body>
+</html>

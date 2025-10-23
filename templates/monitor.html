@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NetCheck Monitor</title>
+<style>
+*{box-sizing:border-box;font-family:'Vazirmatn',Tahoma,Arial}
+:root {
+  --bg:#0f1724; --card:#0b1220; --muted:#94a3b8;
+  --ok:#10b981; --bad:#ef4444; --info:#3b82f6; --glass: rgba(255,255,255,0.04);
+}
+body{margin:0;background:linear-gradient(180deg,var(--bg),#071024);color:#e6eef8;min-height:100vh}
+.header{display:flex;align-items:center;padding:16px 24px}
+.brand{font-weight:700;font-size:1.2rem}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{background:var(--glass);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:inherit;transition:0.3s}
+.btn:hover{background:rgba(255,255,255,0.08)}
+.btn-green{background:rgba(16,185,129,0.2)!important;border-color:rgba(16,185,129,0.3)!important}
+.btn-red{background:rgba(239,68,68,0.2)!important;border-color:rgba(239,68,68,0.3)!important}
+.btn-blue{background:rgba(59,130,246,0.2)!important;border-color:rgba(59,130,246,0.3)!important}
+.btn-yellow{background:rgba(234,179,8,0.25)!important;border-color:rgba(234,179,8,0.3)!important}
+.container{max-width:1100px;margin:18px auto;padding:0 16px}
+.card{background:var(--card);padding:12px;border-radius:10px;margin-bottom:12px}
+.status-dot{display:inline-block;width:18px;height:18px;border-radius:50%}
+.status-ok{background:var(--ok);box-shadow:0 0 8px rgba(16,185,129,0.25)}
+.status-bad{background:var(--bad);box-shadow:0 0 8px rgba(239,68,68,0.25)}
+.blink{animation:blink 1s linear infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:0.15}100%{opacity:1}}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:center}
+
+/* 📊 کارت‌های خلاصه */
+.summary-boxes {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.summary-box {
+  flex: 1;
+  min-width: 150px;
+  background: var(--glass);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.05);
+  transition: 0.3s;
+}
+.summary-box:hover { transform: scale(1.05); background: rgba(255,255,255,0.06); }
+.summary-icon { font-size: 28px; margin-bottom: 6px; }
+.summary-label { font-size: 0.9rem; color: var(--muted); }
+.summary-value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; }
+.summary-total { color: var(--info); }
+.summary-ok { color: var(--ok); }
+.summary-bad { color: var(--bad); }
+.summary-extra { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+/* ✨ انیمیشن‌ها */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.shake { animation: shake 0.6s ease-in-out infinite; }
+.pulse { animation: pulse 1.8s infinite; }
+
+/* spinner */
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-left:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="brand">NetCheck Secure UI</div>
+  <div class="controls">
+{% if session['role'] == 'admin' %}
+  <button class="btn" onclick="location.href='/users'">کاربران</button>
+{% endif %}
+    <button id="goManage" class="btn">مدیریت</button>
+    <button class="btn" onclick="location.href='/monitortv'">TV</button>
+	<button class="btn" onclick="location.href='/profile'">Profile</button>
+    <button id="checkAllBtn" class="btn btn-yellow" onclick="checkAllSequential()">چک همه</button>
+    <button id="mute" class="btn">بی‌صدا</button>
+    <a href="/logout" class="btn">خروج</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <strong>خلاصه وضعیت</strong>
+    <div class="summary-boxes">
+      <div id="box-total" class="summary-box">
+        <div class="summary-icon">📡</div>
+        <div class="summary-label">کل اهداف</div>
+        <div id="sum-total" class="summary-value summary-total">0</div>
+      </div>
+      <div id="box-ok" class="summary-box">
+        <div class="summary-icon">✅</div>
+        <div class="summary-label">آنلاین</div>
+        <div id="sum-ok" class="summary-value summary-ok">0</div>
+        <div id="ok-rate" class="summary-extra"></div>
+      </div>
+      <div id="box-bad" class="summary-box">
+        <div class="summary-icon">❌</div>
+        <div class="summary-label">قطع</div>
+        <div id="sum-bad" class="summary-value summary-bad">0</div>
+        <div id="bad-rate" class="summary-extra"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Targets</strong>
+      <small id="meta"></small>
+    </div>
+    <div style="margin-top:8px">
+      <input id="search" placeholder="جستجو..." style="padding:6px;border-radius:6px;width:240px">
+      <label style="margin-left:8px"><input id="onlyDown" type="checkbox"> فقط قطع‌ها</label>
+    </div>
+    <table id="tbl" style="direction:ltr;">
+      <thead>
+       <tr>
+  <th>وضعیت</th>
+  <th>Host</th>
+  <th>پروتکل</th>
+  <th>دوره(s)</th>
+  <th>آخرین چک</th>
+  <th>SMS</th>
+  <th>عملیات</th>
+</tr>
+
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<audio id="alarm" src="/static/static_alarm.wav" loop></audio>
+
+<script>
+const alarm = document.getElementById('alarm');
+let muted = false;
+document.body.addEventListener('click', ()=>{ alarm.play().catch(()=>{}); }, {once:true});
+document.getElementById('mute').addEventListener('click', ()=>{ 
+  muted = !muted; 
+  if(muted){ alarm.pause(); document.getElementById('mute').textContent='لغو بی‌صدا'; } 
+  else { alarm.play().catch(()=>{}); document.getElementById('mute').textContent='بی‌صدا'; } 
+});
+document.getElementById('goManage').addEventListener('click', ()=> location.href='/manage');
+
+let last = {};
+async function api(path){ const r = await fetch(path); if(!r.ok) throw new Error('api'); return r.json(); }
+
+async function manualCheck(id, btnEl=null) {
+    const btn = btnEl || event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'در حال چک <span class="spinner"></span>';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/check_now?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        const ok = data.ok;
+
+        btn.classList.remove('btn-blue','btn-green','btn-red');
+        btn.classList.add(ok ? 'btn-green' : 'btn-red');
+    } catch {
+        btn.classList.remove('btn-blue','btn-green');
+        btn.classList.add('btn-red');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'چک';
+        setTimeout(() => {
+            btn.classList.remove('btn-green','btn-red');
+            btn.classList.add('btn-blue');
+        }, 2000);
+    }
+}
+
+async function checkAllSequential() {
+    const btn = document.getElementById('checkAllBtn');
+    btn.disabled = true;
+    btn.innerHTML = 'در حال بررسی <span class="spinner"></span>';
+
+    const rowButtons = Array.from(document.querySelectorAll('.check-btn'));
+
+    for (const rowBtn of rowButtons) {
+        rowBtn.classList.remove('btn-green', 'btn-red');
+        rowBtn.classList.add('btn-blue');
+        await manualCheck(rowBtn.dataset.id, rowBtn);  // ← استفاده از data-id
+        await new Promise(r => setTimeout(r, 800)); // مکث بین هر چک
+    }
+
+    btn.innerText = 'چک همه';
+    btn.disabled = false;
+}
+
+async function refresh(){
+  try{
+    const data = await api('/api/status');
+    const tbody = document.querySelector('#tbl tbody');
+    tbody.innerHTML='';
+    let total=0, ok=0, down=0;
+    const q = document.getElementById('search').value.toLowerCase();
+    const onlyDown = document.getElementById('onlyDown').checked;
+
+    for(const t of data.targets){
+      total++;
+      const s = !!t.last_status;
+      if(s) ok++; else down++;
+      if(q && !t.host.toLowerCase().includes(q)) continue;
+      if(onlyDown && s) continue;
+
+      let lastChecked = '-';
+      if (t.last_checked) {
+        const d = new Date(t.last_checked);
+        if (!isNaN(d)) lastChecked = d.toLocaleTimeString('fa-IR',{hour12:false});
+      }
+
+      const tr = document.createElement('tr');
+      const dot = document.createElement('span');
+      dot.className = 'status-dot ' + (s ? 'status-ok' : 'status-bad') + (s ? '' : ' blink');
+    tr.innerHTML = `
+	  <td></td>
+	  <td>${t.host}</td>
+	  <td>${t.protocol}</td>
+	  <td>${t.interval}</td>
+	  <td>${lastChecked}</td>
+	  <td>${t.sms && t.sms.enabled ? '✅' : ''}</td>
+	  <td><button class="btn btn-blue check-btn" data-id="${t.id}" onclick="manualCheck('${t.id}', this)">چک</button></td>
+
+	`;
+      tr.children[0].appendChild(dot);
+      tbody.appendChild(tr);
+
+      const prev = last[t.id];
+      if(prev===undefined) last[t.id]=s;
+      else{ if(prev===true && s===false && !muted) alarm.play().catch(()=>{}); last[t.id]=s; }
+    }
+
+    document.getElementById('sum-total').textContent = total;
+    document.getElementById('sum-ok').textContent = ok;
+    document.getElementById('sum-bad').textContent = down;
+
+    const okRate = total ? Math.round((ok/total)*100) : 0;
+    const badRate = total ? Math.round((down/total)*100) : 0;
+    document.getElementById('ok-rate').textContent = okRate + '% موفق';
+    document.getElementById('bad-rate').textContent = badRate + '% خطا';
+
+    document.getElementById('meta').textContent = `به‌روز: ${new Date().toLocaleTimeString('fa-IR',{hour12:false})}`;
+    if(down===0){ alarm.pause(); }
+
+    const okBox = document.getElementById('box-ok');
+    const badBox = document.getElementById('box-bad');
+    okBox.classList.remove('pulse');
+    badBox.classList.remove('shake');
+    if (down > 0) badBox.classList.add('shake');
+    else if (ok === total && total > 0) okBox.classList.add('pulse');
+  }catch(e){ console.error(e); }
+}
+
+setInterval(refresh,2000); 
+refresh();
+</script>
+</body>
+</html>

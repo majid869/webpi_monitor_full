@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ورود — Netcheck</title>
+<style>
+* {
+    box-sizing: border-box;
+    font-family: "B Nazanin", "B Traffic", Tahoma, "Times New Roman", sans-serif;
+}
+
+body{font-family:'Vazirmatn',Tahoma;background:#0b1220;color:#e6eef8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:28px;border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,0.6);width:360px}
+h2{margin:0 0 12px 0}
+input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+button{width:100%;padding:10px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;margin-top:8px}
+.small{color:#94a3b8;font-size:0.9rem;margin-top:8px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>ورود به NetCheck</h2>
+<button class="btn" onclick="location.href='/monitortv'">TV</button>
+    <form method="post">
+      <label>نام کاربري</label>
+      <input name="username" autofocus required>
+      <label>رمز عبور</label>
+      <input type="password" name="password" required>
+      <button type="submit">ورود</button>
+    </form>
+    <div class="small">نام کاربري پيش‌فرض: <strong>admin</strong> — رمز پيش‌فرض: <strong>admin</strong></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NetCheck Manage</title>
+<style>
+* {
+    box-sizing: border-box;
+    font-family: "B Nazanin", "B Traffic", Tahoma, "Times New Roman", sans-serif;
+}
+select, option {
+  background-color: #0b1220 !important;  /* پس‌زمینه تیره */
+  color: #e6eef8 !important;             /* متن روشن */
+}
+
+select {
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+:root{ --bg:#091026; --card:#071423; --muted:#94a3b8; --accent:#60a5fa; --ok:#10b981; --bad:#ef4444 }
+
+*{box-sizing:border-box;font-family:'Vazirmatn',Tahoma,Arial}
+body{margin:0;background:linear-gradient(180deg,var(--bg), #071024);color:#e6eef8;min-height:100vh}
+.header{display:flex;align-items:center;gap:16px;padding:18px 24px}
+.brand{font-weight:700;font-size:1.2rem}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{background:var(--card);border-radius:10px;padding:8px 12px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:inherit}
+.container{max-width:1100px;margin:18px auto;padding:0 16px}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));padding:14px;border-radius:12px;margin-bottom:12px}
+.form-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input,select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+.small{font-size:0.9rem;color:var(--muted)}
+.table{width:100%;border-collapse:collapse;margin-top:12px}
+.table th,.table td{padding:10px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:center}
+.actions button{background:var(--bad);border:none;padding:6px 10px;border-radius:6px;color:white;cursor:pointer}
+.footer{color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">NetCheck Monitor — مديريت</div>
+    <div class="controls">
+{% if session['role'] == 'admin' %}
+  <button class="btn" onclick="location.href='/users'">کاربران</button>
+{% endif %}
+      <button id="goMonitor" class="btn">رفتن به مانيتور</button>
+<button class="btn" onclick="location.href='/monitortv'">TV</button>
+      <a href="/logout" class="btn">خروج</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:600">افزودن هدف جديد</div>
+      </div>
+      <div class="form-row" style="margin-top:8px">
+    <input id="host" placeholder="IP یا hostname" style="flex:1; direction: ltr;" />
+        <select name="protocol" id="protocol">
+  <option value="ping">ping</option>
+  <option value="http">http</option>
+  <option value="https">https</option>
+  <option value="tcp">tcp</option>
+  <option value="udp">udp</option>
+  <option value="rtmp">rtmp</option>
+ </select>
+        <input id="interval" type="number" value="10" style="width:120px" />
+        <label class="small"><input id="sms_enable" type="checkbox"> ارسال SMS</label>
+        <input id="sms_to" placeholder="+98..." style="width:200px" />
+        <button id="addBtn" class="btn">اضافه کن</button>
+      </div>
+      <div class="small">توجه: براي ارسال پيامک، مودم بايد متصل و سالم باشد.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:600">ليست اهداف</div>
+      <table class="table">
+        <thead><tr><th>Host</th><th>پروتکل</th><th>دوره (s)</th><th>SMS</th><th>آخرين بررسي</th><th>وضعيت</th><th>عمليات</th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+
+    <div class="footer">نسخه‌ي NetCheck — براي تغييرات با ما در تماس باشید سید مجید غلامی 09171461957.</div>
+  </div>
+
+<script>
+document.getElementById('goMonitor').addEventListener('click', ()=> location.href='/monitor');
+const root = document.documentElement;
+
+async function api(path, method='GET', body=null){
+  const opts={method,headers:{}};
+  if(body){ opts.body = JSON.stringify(body); opts.headers['Content-Type']='application/json' }
+  const r = await fetch(path, opts);
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function load(){
+  try{
+    const res = await api('/api/status');
+    const tbody = document.getElementById('list'); tbody.innerHTML='';
+    res.targets.forEach(t=>{
+      const tr = document.createElement('tr');
+      const sms = t.sms && t.sms.enabled ? t.sms.to : '';
+      const status = t.last_status ? '<span style="color:var(--ok)">اوکي</span>' : '<span style="color:var(--bad)">قطع</span>';
+      tr.innerHTML = `<td>${t.host}</td><td>${t.protocol}</td><td>${t.interval}</td><td>${sms}</td><td>${t.last_checked||'-'}</td><td>${status}</td>
+        <td class="actions"><button onclick="del('${t.id}')">حذف</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(e){ console.error(e); }
+}
+
+async function del(id){
+  if(!confirm('آيا مطمئن هستيد؟')) return;
+  await api('/api/targets/'+id, 'DELETE');
+  load();
+}
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const host = document.getElementById('host').value.trim();
+  const protocol = document.getElementById('protocol').value;
+  const interval = parseInt(document.getElementById('interval').value)||10;
+  const sms_enabled = document.getElementById('sms_enable').checked;
+  const sms_to = document.getElementById('sms_to').value.trim();
+  const sms = sms_enabled ? {enabled:true,to:sms_to,notify_on_recovery:false,reminder_minutes:15} : null;
+  try{
+    await api('/api/targets','POST',{host,protocol,interval,sms});
+    document.getElementById('host').value=''; document.getElementById('sms_to').value='';
+    load();
+  }catch(e){ alert('خطا: '+e.message); }
+});
+
+load();
+</script>
+</body>
+</html>

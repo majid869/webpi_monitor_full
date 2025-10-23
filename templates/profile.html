@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پروفایل — تغییر رمز</title>
+<style>
+* { box-sizing: border-box; font-family: "B Nazanin", "B Traffic", Tahoma, "Times New Roman", sans-serif; }
+
+:root {
+  --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#60a5fa;
+  --ok:#10b981; --bad:#ef4444;
+}
+
+body {
+  margin:0; background:var(--bg); color:#e6eef8;
+  min-height:100vh; font-family:'Vazirmatn',Tahoma,Arial;
+}
+
+.header{display:flex;align-items:center;padding:16px 24px;background:#071024}
+.brand{font-weight:700;font-size:1.2rem}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{background:var(--card);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:inherit;transition:0.2s}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+
+.container{max-width:500px;margin:40px auto;padding:0 16px}
+.card{background:var(--card);padding:20px;border-radius:12px}
+input{width:100%;padding:8px;margin:8px 0;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+.alert{padding:8px;margin:8px 0;border-radius:6px}
+.alert-success{background:var(--ok);color:#fff}
+.alert-error{background:var(--bad);color:#fff}
+
+/* اسپینر */
+.spinner {
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="brand">NetCheck — پروفایل</div>
+  <div class="controls">
+    <a href="/monitor" class="btn">بازگشت به مانیتور</a>
+    <a href="/logout" class="btn">خروج</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h3>تغییر رمز عبور</h3>
+    <div id="msg"></div>
+    <input type="password" id="old" placeholder="رمز فعلی">
+    <input type="password" id="new" placeholder="رمز جدید">
+    <input type="password" id="confirm" placeholder="تکرار رمز جدید">
+    <button id="save" class="btn">ذخیره</button>
+  </div>
+</div>
+
+<script>
+async function api(path, method='POST', body=null){
+  const opts={method, headers:{}};
+  if(body){ opts.body=JSON.stringify(body); opts.headers['Content-Type']='application/json'; }
+  const r = await fetch(path, opts);
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+document.getElementById('save').addEventListener('click', async ()=>{
+  const oldP = document.getElementById('old').value.trim();
+  const newP = document.getElementById('new').value.trim();
+  const confirmP = document.getElementById('confirm').value.trim();
+  const msg = document.getElementById('msg');
+  msg.innerHTML='';
+
+  if(!oldP || !newP || !confirmP){
+    msg.innerHTML='<div class="alert alert-error">لطفا همه فیلدها را پر کنید</div>'; return;
+  }
+  if(newP!==confirmP){
+    msg.innerHTML='<div class="alert alert-error">رمز جدید با تکرار مطابقت ندارد</div>'; return;
+  }
+
+  const btn = document.getElementById('save');
+  btn.disabled = true;
+  btn.innerHTML = 'در حال ذخیره <span class="spinner"></span>';
+
+  try{
+    const res = await api('/api/change_password', 'POST', {old: oldP, new: newP});
+    msg.innerHTML='<div class="alert alert-success">رمز با موفقیت تغییر کرد</div>';
+    document.getElementById('old').value=''; 
+    document.getElementById('new').value=''; 
+    document.getElementById('confirm').value='';
+  }catch(e){
+    msg.innerHTML='<div class="alert alert-error">خطا: '+e.message+'</div>';
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = 'ذخیره';
+  }
+});
+</script>
+</body>
+</html>

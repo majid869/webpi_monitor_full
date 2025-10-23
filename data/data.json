@@ -1,0 +1,62 @@
+{
+  "targets": {
+    "c94085359c91": {
+      "host": "rtmp://192.168.1.52/live/dk2",
+      "protocol": "rtmp",
+      "interval": 5,
+      "last_status": false,
+      "last_checked": "2025-10-23T09:48:19Z",
+      "next_run": 1761212904.8580208,
+      "sms": {
+        "enabled": false
+      },
+      "notified": false,
+      "last_sms_ts": 0
+    },
+    "b51f0e7a90e1": {
+      "host": "rtmp://192.168.1.53/live/dk3",
+      "protocol": "rtmp",
+      "interval": 5,
+      "last_status": false,
+      "last_checked": "2025-10-23T09:48:24Z",
+      "next_run": 1761212909.8874168,
+      "sms": {
+        "enabled": false
+      },
+      "notified": false,
+      "last_sms_ts": 0
+    },
+    "be027f9d60df": {
+      "host": "rtmp://192.168.1.50/live/pr3",
+      "protocol": "ping",
+      "interval": 5,
+      "last_status": false,
+      "last_checked": "2025-10-23T09:48:24Z",
+      "next_run": 1761212909.905309,
+      "sms": {
+        "enabled": false
+      },
+      "notified": false,
+      "last_sms_ts": 0
+    },
+    "5c4004112638": {
+      "host": "rtmp://192.168.1.55/live/dv1",
+      "protocol": "rtmp",
+      "interval": 5,
+      "last_status": false,
+      "last_checked": "2025-10-23T09:48:26Z",
+      "next_run": 1761212911.4782279,
+      "sms": {
+        "enabled": false
+      },
+      "notified": false,
+      "last_sms_ts": 0
+    }
+  },
+  "meta": {
+    "modem": {
+      "port": "/dev/ttyUSB0",
+      "status": "unknown"
+    }
+  }
+}

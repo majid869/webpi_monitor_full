@@ -1,0 +1,12 @@
+[Unit]
+Description=WebPi Flask Web Server
+After=network.target
+
+[Service]
+ExecStart=sudo /usr/bin/python3 /home/pi/webpi_monitor_full/app.py
+WorkingDirectory=/home/pi/webpi_monitor_full
+Restart=always
+User=majid
+
+[Install]
+WantedBy=multi-user.target
