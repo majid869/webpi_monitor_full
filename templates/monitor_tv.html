@@ -2,158 +2,99 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
+<title>TV Wall - NetCheck</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NetCheck TV Monitor</title>
 <style>
-* {
-    box-sizing: border-box;
-    font-family: "B Nazanin", "B Traffic", Tahoma, "Times New Roman", sans-serif;
-}
-
 body {
-    margin:0;
-    background:#0f1724;
-    color:#e6eef8;
-    font-family: Tahoma, "Times New Roman", sans-serif;
+  margin:0; background:#000814; color:#fff;
+  font-family:Tahoma,Arial; overflow:hidden;
 }
-.header {
-    padding:12px;
-    font-weight:bold;
-    font-size:1.2em;
-    background:#0b1220;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+.box {
+  width:32%; display:inline-block; margin:0.3%;
+  background:#001d3d; padding:14px; border-radius:10px;
+  text-align:center; vertical-align:top;
 }
-.btn-home {
-    background:#10b981;
-    color:#fff;
-    border:none;
-    padding:6px 12px;
-    border-radius:6px;
-    cursor:pointer;
-    font-weight:bold;
-}
-.container {
-    padding:12px;
-}
-.card {
-    background:#0b1220;
-    margin-bottom:10px;
-    padding:10px;
-    border-radius:6px;
-}
-.status-dot {
-    display:inline-block;
-    width:16px;
-    height:16px;
-    border-radius:50%;
-}
-.status-ok { background:#10b981; }
-.status-bad { background:#ef4444; }
-.table {
-    width:100%;
-    border-collapse:collapse;
-}
-th, td {
-    padding:6px;
-    border-bottom:1px solid #333;
-    text-align:center;
-}
-.summary-box {
-    display:inline-block;
-    background:#071423;
-    padding:8px 12px;
-    margin:4px;
-    border-radius:6px;
-}
+.host { font-size:20px; font-weight:bold; direction:ltr; }
+.ok  { color:#10b981; }
+.bad { color:#ef4444; animation:blink 1s infinite; }
+@keyframes blink { 50% {opacity:.2;} }
+.note { font-size:14px; opacity:.6; margin-top:6px; }
 </style>
 </head>
 <body>
-<div class="header">
-    <div>NetCheck TV Monitor</div>
-    <button class="btn-home" onclick="location.href='/monitor'">🏠 خانه</button>
-</div>
 
-<div class="container">
-    <div class="card">
-        <strong>خلاصه وضعیت:</strong>
-        <div id="summary">
-            <span class="summary-box">کل اهداف: 0</span>
-            <span class="summary-box">آنلاین: 0</span>
-            <span class="summary-box">قطع: 0</span>
-        </div>
-    </div>
-
-    <div class="card">
-        <table class="table" id="tbl">
-            <thead>
-                <tr>
-                    <th>وضعیت</th>
-                    <th>Host</th>
-                    <th>پروتکل</th>
-                    <th>دوره(s)</th>
-                    <th>آخرین چک</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
+<div id="wrap"></div>
+<audio id="alarm" src="/static/static_alarm.wav" loop></audio>
 
 <script>
+window.onerror = function(msg, src, line){
+  document.body.innerHTML = 
+    '<div style="color:#fff;padding:20px;font-size:18px">' +
+    'JS Error:<br>' + msg + '<br>' + src + ':' + line +
+    '</div>';
+};
+
 var last = {};
-function api(path, callback) {
-    fetch(path).then(function(r){
-        if(!r.ok) throw new Error("API error");
-        return r.json();
-    }).then(function(data){
-        callback(null, data);
-    }).catch(function(err){
-        console.log(err);
-        callback(err);
-    });
+var muted = false;
+
+document.body.addEventListener('click', function(){ 
+  document.getElementById('alarm').play().catch(function(){});
+}, {once:true});
+
+function request(url, cb){
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function(){
+    if(xhr.readyState === 4){
+      if(xhr.status === 200) cb(null, JSON.parse(xhr.responseText));
+      else cb('error');
+    }
+  };
+  xhr.open('GET', url, true);
+  xhr.send();
 }
 
-function formatTime(ts) {
-    if(!ts) return '-';
-    var d = new Date(ts);
-    return ('0'+d.getHours()).slice(-2) + ':' +
-           ('0'+d.getMinutes()).slice(-2) + ':' +
-           ('0'+d.getSeconds()).slice(-2);
+function refresh(){
+  request('/api/status', function(err, data){
+    if(err) return;
+    var targets = Array.isArray(data) ? data :
+                  data.targets ? data.targets :
+                  data.data ? data.data : [];
+    var wrap = document.getElementById('wrap');
+    wrap.innerHTML = '';
+    var down = 0;
+
+    for(var i=0;i<targets.length;i++){
+      var t = targets[i];
+      var ok = t.last_status ? true : false;
+      if(!ok) down++;
+
+      var timeStr = '-';
+      if(t.last_checked){
+        var d = new Date(t.last_checked);
+        if(!isNaN(d)) timeStr = d.toLocaleTimeString('fa-IR',{hour12:false});
+      }
+
+      var prev = last[t.id];
+      last[t.id] = ok;
+      if(prev !== undefined && prev===true && ok===false && !muted){
+        document.getElementById('alarm').play().catch(function(){});
+      }
+
+      wrap.innerHTML +=
+        '<div class="box">' +
+          '<div class="host">'+ (t.host||'') +'</div>' +
+          '<div class="'+(ok?'ok':'bad')+'">'+ (ok?'✅ آنلاین':'❌ قطع') +'</div>' +
+          '<div class="note">'+ timeStr +'</div>' +
+        '</div>';
+    }
+
+    if(down===0) document.getElementById('alarm').pause();
+  });
 }
 
-function refresh() {
-    api('/api/status', function(err, data){
-        if(err) return;
-        var tbody = document.getElementById('tbl').getElementsByTagName('tbody')[0];
-        tbody.innerHTML = '';
-        var total=0, ok=0, down=0;
-        for(var i=0; i<data.targets.length; i++){
-            var t = data.targets[i];
-            total++;
-            var s = !!t.last_status;
-            if(s) ok++; else down++;
-
-            var tr = document.createElement('tr');
-            var dot = document.createElement('span');
-            dot.className = 'status-dot ' + (s ? 'status-ok' : 'status-bad');
-            var lastCheck = formatTime(t.last_checked);
-
-            tr.innerHTML = '<td></td><td>'+t.host+'</td><td>'+t.protocol+'</td><td>'+t.interval+'</td><td>'+lastCheck+'</td>';
-            tr.children[0].appendChild(dot);
-            tbody.appendChild(tr);
-        }
-        document.getElementById('summary').innerHTML = 
-            '<span class="summary-box">کل اهداف: '+total+'</span>'+
-            '<span class="summary-box">آنلاین: '+ok+'</span>'+
-            '<span class="summary-box">قطع: '+down+'</span>';
-    });
-}
-
-// تازه‌سازی هر ۲ ثانیه
-setInterval(refresh, 2000);
+setInterval(refresh, 3000);
 refresh();
 </script>
+
 </body>
 </html>
